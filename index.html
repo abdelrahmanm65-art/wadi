@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="initial-scale=1,user-scalable=no,maximum-scale=1,width=device-width">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <link rel="stylesheet" href="css/leaflet.css">
+        <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
+        <link rel="stylesheet" href="css/qgis2web.css">
+        <link rel="stylesheet" href="css/fontawesome-all.min.css">
+        <link rel="stylesheet" href="css/leaflet.photon.css">
+        <link rel="stylesheet" href="css/leaflet-measure.css">
+        <style>
+        :root {
+            --amana-dark: #287067;
+            --amana-dark2: #1e544d;
+            --amana-mid: #36a07b;
+            --amana-light: #63c54b;
+            --amana-gray: #8a8c8d;
+            --amana-bg: #f4f8f7;
+            --topnav-h: 60px;
+            --sidebar-w: 320px;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, 'Cairo', Arial, sans-serif;
+            overflow: hidden;
+        }
+        #map {
+            position: absolute;
+            top: var(--topnav-h);
+            left: 0;
+            right: var(--sidebar-w);
+            bottom: 0;
+            width: auto;
+            height: auto;
+            transition: right .25s ease;
+        }
+
+        /* ===== Top Navbar ===== */
+        #topnavbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            height: var(--topnav-h);
+            z-index: 1200;
+            background: linear-gradient(90deg, var(--amana-dark2), var(--amana-dark) 55%, var(--amana-mid));
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            direction: rtl;
+            padding: 0 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.18);
+            box-sizing: border-box;
+        }
+        #topnavbar .navbar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+        #topnavbar .navbar-logo {
+            height: 42px;
+            width: auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 3px 6px;
+            box-shadow: 0 1px 4px rgba(0,0,0,.2);
+            flex-shrink: 0;
+        }
+        #topnavbar .navbar-titles {
+            color: #fff;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #topnavbar .navbar-titles h1 {
+            margin: 0;
+            font-size: 17px;
+            font-weight: 700;
+        }
+        #topnavbar .navbar-titles span {
+            font-size: 12px;
+            opacity: .88;
+        }
+        #topnavbar .navbar-toggle {
+            display: none;
+            background: rgba(255,255,255,.18);
+            border: none;
+            color: #fff;
+            font-size: 18px;
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        #topnavbar .navbar-toggle:hover { background: rgba(255,255,255,.3); }
+
+        /* ===== Navbar actions (print button, etc.) ===== */
+        #topnavbar .navbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .navbar-print-btn {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            background: rgba(255,255,255,.18);
+            border: none;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 0 14px;
+            height: 38px;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .navbar-print-btn:hover { background: rgba(255,255,255,.3); }
+        .navbar-print-btn i { font-size: 15px; }
+        @media (max-width: 820px) {
+            .navbar-print-btn .print-btn-text { display: none; }
+            .navbar-print-btn { width: 38px; padding: 0; justify-content: center; }
+        }
+
+        /* ===== Print report header (visible only when printing) ===== */
+        #printReportHeader { display: none; }
+
+        /* ===== Right Sidebar ===== */
+        #rightsidebar {
+            position: fixed;
+            top: var(--topnav-h);
+            right: 0; bottom: 0;
+            width: var(--sidebar-w);
+            background: var(--amana-bg);
+            border-right: none;
+            box-shadow: -2px 0 10px rgba(0,0,0,.08);
+            overflow-y: auto;
+            z-index: 1100;
+            direction: rtl;
+            transition: transform .25s ease;
+            box-sizing: border-box;
+        }
+        #rightsidebar::-webkit-scrollbar { width: 8px; }
+        #rightsidebar::-webkit-scrollbar-thumb { background: #c2d3cf; border-radius: 4px; }
+
+        .sb-card {
+            background: #fff;
+            margin: 12px;
+            border-radius: 10px;
+            box-shadow: 0 1px 5px rgba(0,0,0,.09);
+            overflow: hidden;
+        }
+        .sb-card-header {
+            background: var(--amana-dark);
+            color: #fff;
+            padding: 10px 14px;
+            font-weight: 700;
+            font-size: 13.5px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+        .sb-card-header .sb-title { display: flex; align-items: center; gap: 8px; }
+        .sb-card-header i.sb-caret { transition: transform .2s ease; font-size: 12px; }
+        .sb-card.collapsed .sb-card-header i.sb-caret { transform: rotate(90deg); }
+        .sb-card-body {
+            padding: 12px 14px;
+            font-size: 13px;
+            color: #2b2b2b;
+        }
+        #sidebar-stats { direction: ltr; text-align: left; }
+        #sidebar-stats-card .sb-card-header { direction: ltr; }
+        .sb-card.collapsed .sb-card-body { display: none; }
+
+        /* Stats */
+        .sb-stat-row {
+            margin-bottom: 9px;
+        }
+        .sb-stat-row .sb-stat-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12.5px;
+            margin-bottom: 3px;
+            color: #3a3a3a;
+        }
+        .sb-stat-row .sb-stat-label b { color: var(--amana-dark2); }
+        .sb-stat-bar {
+            height: 7px;
+            border-radius: 4px;
+            background: #e6ece9;
+            overflow: hidden;
+        }
+        .sb-stat-bar > span {
+            display: block;
+            height: 100%;
+            background: linear-gradient(90deg, var(--amana-mid), var(--amana-light));
+            border-radius: 4px;
+        }
+        .sb-stat-totals {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .sb-stat-chip {
+            flex: 1 1 auto;
+            min-width: 68px;
+            background: var(--amana-bg);
+            border: 1px solid #dfe9e6;
+            border-radius: 8px;
+            text-align: center;
+            padding: 6px 4px;
+        }
+        .sb-stat-chip b {
+            display: block;
+            font-size: 16px;
+            color: var(--amana-dark);
+        }
+        .sb-stat-chip span {
+            font-size: 10.5px;
+            color: var(--amana-gray);
+        }
+
+        /* Legend/layers card is always expanded, no collapse affordance */
+        .sb-card-header.no-collapse { cursor: default; }
+
+        /* Filterable stat rows */
+        .sb-stat-reset {
+            display: inline-block;
+            font-size: 11.5px;
+            color: var(--amana-mid);
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        .sb-stat-reset:hover { text-decoration: underline; }
+        .sb-stat-row { cursor: pointer; border-radius: 6px; padding: 4px 6px; margin-right: -6px; margin-left: -6px; }
+        .sb-stat-row:hover { background: var(--amana-bg); }
+        .sb-stat-row.active { background: #e4f2ee; }
+        .sb-stat-row.active .sb-stat-label b { color: var(--amana-mid); }
+        .sb-stat-row .sb-stat-area { color: var(--amana-gray); font-size: 11px; }
+        .sb-color-dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+            border: 1px solid rgba(0,0,0,.15);
+        }
+        .sb-stat-metrics {
+            display: flex;
+            gap: 10px;
+            margin: 4px 0 6px;
+        }
+        .sb-stat-metrics .sb-metric {
+            flex: 1;
+            background: var(--amana-bg);
+            border-radius: 8px;
+            text-align: center;
+            padding: 6px 4px;
+        }
+        .sb-stat-metrics .sb-metric b {
+            display: block;
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--amana-dark2);
+            line-height: 1.2;
+        }
+        .sb-stat-metrics .sb-metric span {
+            font-size: 10.5px;
+            color: var(--amana-gray);
+        }
+        .sb-stat-row.active .sb-stat-metrics .sb-metric { background: #d9efe8; }
+        .sb-stat-row.active .sb-stat-metrics .sb-metric b { color: var(--amana-mid); }
+
+        /* Layer/legend control now stays as the default floating map control (not in the sidebar) */
+
+        /* Push default Leaflet top controls below the navbar */
+        .leaflet-top {
+            top: calc(var(--topnav-h) + 8px) !important;
+        }
+
+        /* Print report content (built dynamically, rendered only inside @media print) */
+        .print-header-top {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border-bottom: 3px solid var(--amana-dark);
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .print-logo { height: 48px; width: auto; }
+        .print-header-titles { flex: 1; }
+        .print-header-titles h1 { margin: 0; font-size: 20px; color: var(--amana-dark2); }
+        .print-header-titles span { font-size: 12px; color: var(--amana-gray); }
+        .print-header-date { font-size: 12px; color: #3a3a3a; white-space: nowrap; }
+        .print-stats-table { width: 100%; border-collapse: collapse; font-size: 11.5px; margin-top: 4px; }
+        .print-stats-table th, .print-stats-table td {
+            border: 1px solid #cfd8d5;
+            padding: 4px 8px;
+            text-align: center;
+        }
+        .print-stats-table thead th { background: var(--amana-bg); color: var(--amana-dark2); font-weight: 700; }
+        .print-stats-table tfoot td { font-weight: 800; background: var(--amana-bg); }
+        .print-color-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-left: 6px;
+            vertical-align: middle;
+            border: 1px solid rgba(0,0,0,.15);
+        }
+
+        @media print {
+            @page { size: A3 landscape; margin: 10mm; }
+            html, body { width: auto; height: auto; overflow: visible !important; background: #fff !important; }
+            #topnavbar, #rightsidebar, .leaflet-control-container { display: none !important; }
+            #printReportHeader {
+                display: block !important;
+                direction: rtl;
+                position: relative;
+                width: 100%;
+            }
+            #map {
+                position: relative !important;
+                top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+                width: 100% !important;
+                height: 260mm !important;
+                page-break-inside: avoid;
+            }
+        }
+
+        @media (max-width: 820px) {
+            :root { --sidebar-w: 86vw; }
+            #topnavbar .navbar-toggle { display: block; }
+            #topnavbar .navbar-titles span { display: none; }
+            #rightsidebar {
+                transform: translateX(100%);
+                width: 86vw;
+                max-width: 360px;
+            }
+            #rightsidebar.open { transform: translateX(0); }
+            #map { right: 0 !important; }
+        }
+        </style>
+        <title>Wadi Progress</title>
+    </head>
+    <body>
+        <div id="topnavbar">
+            <div class="navbar-brand">
+                <img class="navbar-logo" src="images/Amana_Logo.png" alt="أمانة منطقة المدينة المنورة">
+                <div class="navbar-titles">
+                    <h1>تقدم أعمال الأودية</h1>
+                    <span>الأعمال المنجزة في تصميم وتنفيذ الأودية</span>
+                </div>
+            </div>
+            <div class="navbar-actions">
+                <button id="printReportBtn" class="navbar-print-btn" title="طباعة تقرير A3">
+                    <i class="fa fa-print"></i> <span class="print-btn-text">طباعة تقرير A3</span>
+                </button>
+                <button id="sidebarToggleBtn" class="navbar-toggle" title="إظهار/إخفاء اللوحة">
+                    <i class="fa fa-bars"></i>
+                </button>
+            </div>
+        </div>
+
+        <div id="printReportHeader">
+            <div class="print-header-top">
+                <img class="print-logo" src="images/Amana_Logo.png" alt="أمانة منطقة المدينة المنورة">
+                <div class="print-header-titles">
+                    <h1>تقدم أعمال الأودية</h1>
+                    <span>الأعمال المنجزة في تصميم وتنفيذ الأودية</span>
+                </div>
+                <div class="print-header-date">تاريخ التقرير: <span id="printDate"></span></div>
+            </div>
+            <div id="printStatsTable"></div>
+        </div>
+
+        <div id="rightsidebar">
+            <div class="sb-card" id="sidebar-stats-card">
+                <div class="sb-card-header"><span class="sb-title"><i class="fa fa-chart-simple"></i> Statistics</span><i class="fa fa-chevron-down sb-caret"></i></div>
+                <div class="sb-card-body" id="sidebar-stats"></div>
+            </div>
+        </div>
+
+        <div id="map">
+        </div>
+        <script src="js/qgis2web_expressions.js"></script>
+        <script src="js/leaflet.js"></script>
+        <script src="js/L.Control.Layers.Tree.min.js"></script>
+        <script src="js/leaflet-svg-shape-markers.min.js"></script>
+        <script src="js/leaflet.rotatedMarker.js"></script>
+        <script src="js/leaflet.pattern.js"></script>
+        <script src="js/leaflet-hash.js"></script>
+        <script src="js/Autolinker.min.js"></script>
+        <script src="js/rbush.min.js"></script>
+        <script src="js/labelgun.min.js"></script>
+        <script src="js/labels.js"></script>
+        <script src="js/leaflet.photon.js"></script>
+        <script src="js/leaflet-measure.js"></script>
+        <script src="data/Wadi_1.js"></script>
+        <script src="data/Roads_2.js"></script>
+        <script src="data/Comments_3.js"></script>
+        <script src="data/Stations_4.js"></script>
+        <script>
+        var map = L.map('map', {
+            zoomControl:false, maxZoom:28, minZoom:1
+        }).fitBounds([[24.414103072801403,39.4870222047131],[24.560781145763062,39.72091726108615]]);
+        var hash = new L.Hash(map);
+        map.attributionControl.setPrefix('<a href="https://github.com/qgis2web/qgis2web" target="_blank">qgis2web</a> &middot; <a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> &middot; <a href="https://qgis.org">QGIS</a>');
+        var autolinker = new Autolinker({truncate: {length: 30, location: 'smart'}});
+        // remove popup's row if "visible-with-data"
+        function removeEmptyRowsFromPopupContent(content, feature) {
+         var tempDiv = document.createElement('div');
+         tempDiv.innerHTML = content;
+         var rows = tempDiv.querySelectorAll('tr');
+         for (var i = 0; i < rows.length; i++) {
+             var td = rows[i].querySelector('td.visible-with-data');
+             var key = td ? td.id : '';
+             if (td && td.classList.contains('visible-with-data') && feature.properties[key] == null) {
+                 rows[i].parentNode.removeChild(rows[i]);
+             }
+         }
+         return tempDiv.innerHTML;
+        }
+        // modify popup if contains media
+        function addClassToPopupIfMedia(content, popup) {
+            var tempDiv = document.createElement('div');
+            tempDiv.innerHTML = content;
+            var imgTd = tempDiv.querySelector('td img');
+            if (imgTd) {
+                var src = imgTd.getAttribute('src');
+                if (/\.(jpg|jpeg|png|gif|bmp|webp|avif)$/i.test(src)) {
+                    popup._contentNode.classList.add('media');
+                    var img = popup._contentNode.querySelector('td img');
+                    if (img) {
+                        // If already loaded (cache), update immediately
+                        if (img.complete && img.naturalHeight > 0) {
+                            popup.update();
+                        } else {
+                            img.addEventListener('load', function() {
+                                popup.update();
+                            });
+                            img.addEventListener('error', function() {
+                                popup.update();
+                            });
+                        }
+                    }
+                } else if (/\.(mp3|wav|ogg|aac)$/i.test(src)) {
+                    var audio = document.createElement('audio');
+                    audio.controls = true;
+                    audio.src = src;
+                    imgTd.parentNode.replaceChild(audio, imgTd);
+                    popup._contentNode.classList.add('media');
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else if (/\.(mp4|webm|ogg|mov)$/i.test(src)) {
+                    var video = document.createElement('video');
+                    video.controls = true;
+                    video.src = src;
+                    video.style.width = "400px";
+                    video.style.height = "300px";
+                    video.style.maxHeight = "60vh";
+                    video.style.maxWidth = "60vw";
+                    imgTd.parentNode.replaceChild(video, imgTd);
+                    popup._contentNode.classList.add('media');
+                    // Aggiorna il popup quando il video carica i metadati
+                    video.addEventListener('loadedmetadata', function() {
+                        popup.update();
+                    });
+                    setTimeout(function() {
+                        popup.setContent(tempDiv.innerHTML);
+                        popup.update();
+                    }, 10);
+                } else {
+                    popup._contentNode.classList.remove('media');
+                }
+            } else {
+                popup._contentNode.classList.remove('media');
+            }
+        }
+        // Title & abstract are now shown in #topnavbar instead of floating map controls.
+        var zoomControl = L.control.zoom({
+            position: 'topleft'
+        }).addTo(map);
+        var measureControl = new L.Control.Measure({
+            position: 'topleft',
+            primaryLengthUnit: 'meters',
+            secondaryLengthUnit: 'kilometers',
+            primaryAreaUnit: 'sqmeters',
+            secondaryAreaUnit: 'hectares'
+        });
+        measureControl.addTo(map);
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].innerHTML = '';
+        document.getElementsByClassName('leaflet-control-measure-toggle')[0].className += ' fas fa-ruler';
+        var bounds_group = new L.featureGroup([]);
+        function setBounds() {
+        }
+        map.createPane('pane_GoogleSatellite_0');
+        map.getPane('pane_GoogleSatellite_0').style.zIndex = 400;
+        var layer_GoogleSatellite_0 = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            pane: 'pane_GoogleSatellite_0',
+            opacity: 0.5,
+            attribution: '',
+            minZoom: 1,
+            maxZoom: 28,
+            minNativeZoom: 0,
+            maxNativeZoom: 30
+        });
+        layer_GoogleSatellite_0;
+        map.addLayer(layer_GoogleSatellite_0);
+        function pop_Wadi_1(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="OBJECTID">' + (feature.properties['OBJECTID'] != null ? autolinker.link(String(feature.properties['OBJECTID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="WADIWIDTH">' + (feature.properties['WADIWIDTH'] != null ? autolinker.link(String(feature.properties['WADIWIDTH']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="GLOBALID">' + (feature.properties['GLOBALID'] != null ? autolinker.link(String(feature.properties['GLOBALID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="REMARKS">' + (feature.properties['REMARKS'] != null ? autolinker.link(String(feature.properties['REMARKS']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="SHAPE_Leng">' + (feature.properties['SHAPE_Leng'] != null ? autolinker.link(String(feature.properties['SHAPE_Leng']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="SHAPE_Area">' + (feature.properties['SHAPE_Area'] != null ? autolinker.link(String(feature.properties['SHAPE_Area']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="Status">' + (feature.properties['Status'] != null ? autolinker.link(String(feature.properties['Status']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="WADI_NAME">' + (feature.properties['WADI_NAME'] != null ? autolinker.link(String(feature.properties['WADI_NAME']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Wadi_1_0(feature) {
+            switch(String(feature.properties['Status'])) {
+                case 'Design under progress':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(155,143,62,1)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(155,143,62,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Implemented':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(143,29,227,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(143,29,227,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'N/A':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(40,188,235,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(40,188,235,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Not implemented & design finished':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(41,202,52,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(41,202,52,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Not implemented & no design':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(247,156,31,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(247,156,31,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Not implemented & promenade finished':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(152,105,69,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(152,105,69,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Required Area':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(251,246,33,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(251,246,33,0.6)',
+                interactive: true,
+            }
+                    break;
+                case 'Under progress & design finished':
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(234,9,27,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(234,9,27,0.6)',
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_Wadi_1',
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1.0, 
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(122,4,3,1.0)',
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Wadi_1');
+        map.getPane('pane_Wadi_1').style.zIndex = 401;
+        map.getPane('pane_Wadi_1').style['mix-blend-mode'] = 'normal';
+        var layer_Wadi_1 = new L.geoJson(json_Wadi_1, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Wadi_1',
+            layerName: 'layer_Wadi_1',
+            pane: 'pane_Wadi_1',
+            onEachFeature: pop_Wadi_1,
+            style: style_Wadi_1_0,
+        });
+        bounds_group.addLayer(layer_Wadi_1);
+        map.addLayer(layer_Wadi_1);
+        function pop_Roads_2(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="OBJECTID">' + (feature.properties['OBJECTID'] != null ? autolinker.link(String(feature.properties['OBJECTID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="NAME_ARABI">' + (feature.properties['NAME_ARABI'] != null ? autolinker.link(String(feature.properties['NAME_ARABI']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Roads_2_0() {
+            return {
+                pane: 'pane_Roads_2',
+                opacity: 1,
+                color: 'rgba(16,23,13,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 3.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Roads_2');
+        map.getPane('pane_Roads_2').style.zIndex = 402;
+        map.getPane('pane_Roads_2').style['mix-blend-mode'] = 'normal';
+        var layer_Roads_2 = new L.geoJson(json_Roads_2, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Roads_2',
+            layerName: 'layer_Roads_2',
+            pane: 'pane_Roads_2',
+            onEachFeature: pop_Roads_2,
+            style: style_Roads_2_0,
+        });
+        bounds_group.addLayer(layer_Roads_2);
+        map.addLayer(layer_Roads_2);
+        function pop_Comments_3(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="Layer">' + (feature.properties['Layer'] != null ? autolinker.link(String(feature.properties['Layer']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Comments_3_0(feature) {
+            switch(String(feature.properties['Layer'])) {
+                case 'required north side (promenade & wadi bed )':
+                    return {
+                pane: 'pane_Comments_3',
+                opacity: 1,
+                color: 'rgba(43,167,202,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 5.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                case 'South side finished design (promenade& wadi bed)':
+                    return {
+                pane: 'pane_Comments_3',
+                opacity: 1,
+                color: 'rgba(193,0,216,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 5.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+                default:
+                    return {
+                pane: 'pane_Comments_3',
+                opacity: 1,
+                color: 'rgba(213,30,149,1.0)',
+                dashArray: '',
+                lineCap: 'square',
+                lineJoin: 'bevel',
+                weight: 1.0,
+                fillOpacity: 0,
+                interactive: true,
+            }
+                    break;
+            }
+        }
+        map.createPane('pane_Comments_3');
+        map.getPane('pane_Comments_3').style.zIndex = 403;
+        map.getPane('pane_Comments_3').style['mix-blend-mode'] = 'normal';
+        var layer_Comments_3 = new L.geoJson(json_Comments_3, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Comments_3',
+            layerName: 'layer_Comments_3',
+            pane: 'pane_Comments_3',
+            onEachFeature: pop_Comments_3,
+            style: style_Comments_3_0,
+        });
+        bounds_group.addLayer(layer_Comments_3);
+        map.addLayer(layer_Comments_3);
+        function pop_Stations_4(feature, layer) {
+            var popupContent = '<table>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="OBJECTID">' + (feature.properties['OBJECTID'] != null ? autolinker.link(String(feature.properties['OBJECTID']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                    <tr>\
+                        <td colspan="2" class="visible-with-data" id="Text">' + (feature.properties['Text'] != null ? autolinker.link(String(feature.properties['Text']).replace(/'/g, '\'').toLocaleString()) : '') + '</td>\
+                    </tr>\
+                </table>';
+            var content = removeEmptyRowsFromPopupContent(popupContent, feature);
+			layer.on('popupopen', function(e) {
+				addClassToPopupIfMedia(content, e.popup);
+			});
+			layer.bindPopup(content, { maxHeight: 400 });
+        }
+
+        function style_Stations_4_0() {
+            return {
+                pane: 'pane_Stations_4',
+                radius: 4.0,
+                opacity: 1,
+                color: 'rgba(35,35,35,1.0)',
+                dashArray: '',
+                lineCap: 'butt',
+                lineJoin: 'miter',
+                weight: 1,
+                fill: true,
+                fillOpacity: 1,
+                fillColor: 'rgba(183,72,75,1.0)',
+                interactive: true,
+            }
+        }
+        map.createPane('pane_Stations_4');
+        map.getPane('pane_Stations_4').style.zIndex = 404;
+        map.getPane('pane_Stations_4').style['mix-blend-mode'] = 'normal';
+        var layer_Stations_4 = new L.geoJson(json_Stations_4, {
+            attribution: '',
+            interactive: true,
+            dataVar: 'json_Stations_4',
+            layerName: 'layer_Stations_4',
+            pane: 'pane_Stations_4',
+            onEachFeature: pop_Stations_4,
+            pointToLayer: function (feature, latlng) {
+                var context = {
+                    feature: feature,
+                    variables: {}
+                };
+                return L.shapeMarker(latlng, style_Stations_4_0(feature));
+            },
+        });
+        bounds_group.addLayer(layer_Stations_4);
+        map.addLayer(layer_Stations_4);
+        const url = {"Nominatim OSM": "https://nominatim.openstreetmap.org/search?format=geojson&addressdetails=1&",
+        "France BAN": "https://api-adresse.data.gouv.fr/search/?"}
+        var photonControl = L.control.photon({
+            url: url["Nominatim OSM"],
+            feedbackLabel: '',
+            position: 'topleft',
+            includePosition: true,
+            initial: true,
+            // resultsHandler: myHandler,
+        }).addTo(map);
+        photonControl._container.childNodes[0].style.borderRadius="10px"
+        // Create a variable to store the geoJSON data
+        var x = null;
+        // Create a variable to store the marker
+        var marker = null;
+        // Add an event listener to the Photon control to create a marker from the returned geoJSON data
+        var z = null;
+        photonControl.on('selected', function(e) {
+            console.log(photonControl.search.resultsContainer);
+            if (x != null) {
+                map.removeLayer(obj3.marker);
+                map.removeLayer(x);
+            }
+            obj2.gcd = e.choice;
+            x = L.geoJSON(obj2.gcd).addTo(map);
+            var label = typeof obj2.gcd.properties.label === 'undefined' ? obj2.gcd.properties.display_name : obj2.gcd.properties.label;
+            obj3.marker = L.marker(x.getLayers()[0].getLatLng()).bindPopup(label).addTo(map);
+            map.setView(x.getLayers()[0].getLatLng(), 17);
+            z = typeof e.choice.properties.label === 'undefined'? e.choice.properties.display_name : e.choice.properties.label;
+            console.log(e);
+            e.target.input.value = z;
+        });
+        var search = document.getElementsByClassName("leaflet-photon leaflet-control")[0];
+        search.classList.add("leaflet-control-search")
+        search.style.display = "flex";
+        search.style.backgroundColor="rgba(255,255,255,0.5)"
+        /* Search stays as a floating control on the left of the map (not inside the right sidebar) */
+
+        // Create the new button element
+        var button = document.createElement("div");
+        button.id = "gcd-button-control";
+        button.className = "gcd-gl-btn fa fa-search search-button";
+
+        // Insert the button at the beginning of the search control
+        search.insertBefore(button, search.firstChild);
+        last = search.lastChild;
+        last.style.display = "none";
+        button.addEventListener("click", function (e) {
+            if (last.style.display === "none") {
+                last.style.display = "block";
+            } else {
+                last.style.display = "none";
+            }
+        });
+        var overlaysTree = [
+            {label: '<img src="legend/Stations_4.png" /> Stations', layer: layer_Stations_4},
+            {label: '<img src="legend/Roads_2.png" /> Roads', layer: layer_Roads_2},
+            {label: "Google Satellite", layer: layer_GoogleSatellite_0},]
+        var lay = L.control.layers.tree(null, overlaysTree,{
+            //namedToggle: true,
+            //selectorBack: false,
+            //closedSymbol: '&#8862; &#x1f5c0;',
+            //openedSymbol: '&#8863; &#x1f5c1;',
+            //collapseAll: 'Collapse all',
+            //expandAll: 'Expand all',
+            collapsed: true,
+        });
+        lay.addTo(map);
+        setBounds();
+        var i = 0;
+        layer_Roads_2.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['NAME_ARABI'] !== null?String('<div style="color: #0f1113; font-size: 7pt; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['NAME_ARABI']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_Roads_2'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        var i = 0;
+        layer_Stations_4.eachLayer(function(layer) {
+            var context = {
+                feature: layer.feature,
+                variables: {}
+            };
+            layer.bindTooltip((layer.feature.properties['Text'] !== null?String('<div style="color: #323232; font-size: 7pt; font-family: \'Open Sans\', sans-serif;">' + layer.feature.properties['Text']) + '</div>':''), {permanent: true, offset: [-0, -16], className: 'css_Stations_4'});
+            labels.push(layer);
+            totalMarkers += 1;
+              layer.added = true;
+              addLabel(layer, i);
+              i++;
+        });
+        resetLabels([layer_Wadi_1,layer_Roads_2,layer_Stations_4]);
+        map.on("zoomend", function(){
+            resetLabels([layer_Wadi_1,layer_Roads_2,layer_Stations_4]);
+        });
+        map.on("layeradd", function(){
+            resetLabels([layer_Wadi_1,layer_Roads_2,layer_Stations_4]);
+        });
+        map.on("layerremove", function(){
+            resetLabels([layer_Wadi_1,layer_Roads_2,layer_Stations_4]);
+        });
+
+        /* ===== Amana UI: stats dashboard ===== */
+        function statusColor(key) {
+            try {
+                var s = style_Wadi_1_0({ properties: { Status: key } });
+                return s.fillColor || s.color || 'var(--amana-mid)';
+            } catch (e) {
+                return 'var(--amana-mid)';
+            }
+        }
+        var statusOrder = [
+            'Implemented',
+            'Under progress & design finished',
+            'Not implemented & promenade finished',
+            'Not implemented & design finished',
+            'Design under progress',
+            'Not implemented & no design',
+            'Required Area',
+            'N/A'
+        ];
+        function statusOrderIndex(key) {
+            var i = statusOrder.indexOf(key);
+            return i === -1 ? statusOrder.length : i;
+        }
+        var activeStatusFilter = null;
+        function applyWadiFilter(status) {
+            layer_Wadi_1.eachLayer(function (l) {
+                var s = (l.feature.properties && l.feature.properties['Status']) || 'Unclassified';
+                if (!status || s === status) {
+                    l.setStyle(style_Wadi_1_0(l.feature));
+                } else {
+                    l.setStyle({ opacity: 0, fillOpacity: 0, interactive: false });
+                }
+            });
+        }
+        function fmtArea(n) {
+            if (!n) return '0';
+            return Math.round(n).toLocaleString('en');
+        }
+        function buildStats() {
+            var statusCounts = {};
+            var statusAreas = {};
+            (json_Wadi_1.features || []).forEach(function (f) {
+                var s = (f.properties && f.properties['Status']) || 'Unclassified';
+                statusCounts[s] = (statusCounts[s] || 0) + 1;
+                statusAreas[s] = (statusAreas[s] || 0) + (parseFloat(f.properties && f.properties['SHAPE_Area']) || 0);
+            });
+            var maxCount = Math.max.apply(null, Object.values(statusCounts).concat([1]));
+            var html = '';
+
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+                '<span style="font-weight:700;color:var(--amana-dark2);font-size:12.5px;">Wadi Status (click to filter)</span>' +
+                (activeStatusFilter ? '<span class="sb-stat-reset" id="sbStatReset">Show All ✕</span>' : '') +
+                '</div>';
+
+            Object.keys(statusCounts).sort(function (a, b) {
+                return statusOrderIndex(a) - statusOrderIndex(b);
+            }).forEach(function (key) {
+                var count = statusCounts[key];
+                var area = statusAreas[key];
+                var pct = Math.round((count / maxCount) * 100);
+                var color = statusColor(key);
+                var activeCls = (activeStatusFilter === key) ? ' active' : '';
+                html += '<div class="sb-stat-row' + activeCls + '" data-status="' + encodeURIComponent(key) + '">' +
+                    '<div class="sb-stat-label"><span><i class="sb-color-dot" style="background:' + color + ';"></i>' + key + '</span></div>' +
+                    '<div class="sb-stat-metrics">' +
+                        '<div class="sb-metric"><b>' + count + '</b><span>Segments</span></div>' +
+                        '<div class="sb-metric"><b>' + fmtArea(area) + '</b><span>Area (m²)</span></div>' +
+                    '</div>' +
+                    '<div class="sb-stat-bar"><span style="width:' + pct + '%;background:' + color + ';"></span></div>' +
+                    '</div>';
+            });
+            document.getElementById('sidebar-stats').innerHTML = html;
+
+            document.querySelectorAll('#sidebar-stats .sb-stat-row').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    var key = decodeURIComponent(row.getAttribute('data-status'));
+                    activeStatusFilter = (activeStatusFilter === key) ? null : key;
+                    applyWadiFilter(activeStatusFilter);
+                    buildStats();
+                });
+            });
+            var resetEl = document.getElementById('sbStatReset');
+            if (resetEl) {
+                resetEl.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    activeStatusFilter = null;
+                    applyWadiFilter(null);
+                    buildStats();
+                });
+            }
+        }
+        buildStats();
+
+        /* ===== Amana UI: collapsible sidebar cards ===== */
+        document.querySelectorAll('#rightsidebar .sb-card-header').forEach(function (header) {
+            header.addEventListener('click', function () {
+                header.closest('.sb-card').classList.toggle('collapsed');
+            });
+        });
+
+        /* ===== Amana UI: mobile sidebar toggle ===== */
+        var sidebarToggleBtn = document.getElementById('sidebarToggleBtn');
+        var rightSidebar = document.getElementById('rightsidebar');
+        sidebarToggleBtn.addEventListener('click', function () {
+            rightSidebar.classList.toggle('open');
+        });
+
+        /* ===== Amana UI: A3 print report ===== */
+        function buildPrintReport() {
+            var statusCounts = {};
+            var statusAreas = {};
+            var totalCount = 0;
+            var totalArea = 0;
+            (json_Wadi_1.features || []).forEach(function (f) {
+                var s = (f.properties && f.properties['Status']) || 'Unclassified';
+                var a = parseFloat(f.properties && f.properties['SHAPE_Area']) || 0;
+                statusCounts[s] = (statusCounts[s] || 0) + 1;
+                statusAreas[s] = (statusAreas[s] || 0) + a;
+                totalCount += 1;
+                totalArea += a;
+            });
+            var rows = '';
+            Object.keys(statusCounts).sort(function (a, b) {
+                return statusOrderIndex(a) - statusOrderIndex(b);
+            }).forEach(function (key) {
+                var count = statusCounts[key];
+                var area = statusAreas[key];
+                var pct = totalCount ? Math.round((count / totalCount) * 100) : 0;
+                var color = statusColor(key);
+                rows += '<tr>' +
+                    '<td style="text-align:right;"><span class="print-color-dot" style="background:' + color + ';"></span>' + key + '</td>' +
+                    '<td>' + count + '</td>' +
+                    '<td>' + fmtArea(area) + '</td>' +
+                    '<td>' + pct + '%</td>' +
+                    '</tr>';
+            });
+            var tableHtml = '<table class="print-stats-table">' +
+                '<thead><tr><th>الحالة</th><th>عدد المقاطع</th><th>المساحة (م²)</th><th>النسبة</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+                '<tfoot><tr><td>الإجمالي</td><td>' + totalCount + '</td><td>' + fmtArea(totalArea) + '</td><td>100%</td></tr></tfoot>' +
+                '</table>';
+            document.getElementById('printStatsTable').innerHTML = tableHtml;
+            var dateEl = document.getElementById('printDate');
+            if (dateEl) {
+                dateEl.textContent = new Date().toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
+            }
+        }
+        var printReportBtn = document.getElementById('printReportBtn');
+        printReportBtn.addEventListener('click', function () {
+            buildPrintReport();
+            map.invalidateSize();
+            setTimeout(function () {
+                window.print();
+            }, 200);
+        });
+        window.addEventListener('beforeprint', buildPrintReport);
+        </script>        
+    </body>
+</html>
