@@ -1025,10 +1025,12 @@
             var statusAreas = {};
             (json_Wadi_1.features || []).forEach(function (f) {
                 var s = (f.properties && f.properties['Status']) || 'Unclassified';
+                if (s === 'N/A') { return; } /* shown on the map, excluded from stats */
                 statusCounts[s] = (statusCounts[s] || 0) + 1;
                 statusAreas[s] = (statusAreas[s] || 0) + (parseFloat(f.properties && f.properties['SHAPE_Area']) || 0);
             });
             var maxCount = Math.max.apply(null, Object.values(statusCounts).concat([1]));
+            var totalArea = Object.values(statusAreas).reduce(function (a, b) { return a + b; }, 0) || 1;
             var html = '';
 
             html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
@@ -1041,6 +1043,7 @@
             }).forEach(function (key) {
                 var count = statusCounts[key];
                 var area = statusAreas[key];
+                var areaPct = Math.round((area / totalArea) * 100);
                 var pct = Math.round((count / maxCount) * 100);
                 var color = statusColor(key);
                 var activeCls = (activeStatusFilter === key) ? ' active' : '';
@@ -1048,7 +1051,7 @@
                     '<div class="sb-stat-label"><span><i class="sb-color-dot" style="background:' + color + ';"></i>' + key + '</span></div>' +
                     '<div class="sb-stat-metrics">' +
                         '<div class="sb-metric"><b>' + count + '</b><span>Segments</span></div>' +
-                        '<div class="sb-metric"><b>' + fmtArea(area) + '</b><span>Area (m²)</span></div>' +
+                        '<div class="sb-metric"><b>' + fmtArea(area) + '</b><span>Area (m²) &middot; ' + areaPct + '%</span></div>' +
                     '</div>' +
                     '<div class="sb-stat-bar"><span style="width:' + pct + '%;background:' + color + ';"></span></div>' +
                     '</div>';
@@ -1097,6 +1100,7 @@
             var totalArea = 0;
             (json_Wadi_1.features || []).forEach(function (f) {
                 var s = (f.properties && f.properties['Status']) || 'Unclassified';
+                if (s === 'N/A') { return; } /* excluded from the report, same as the stats panel */
                 var a = parseFloat(f.properties && f.properties['SHAPE_Area']) || 0;
                 statusCounts[s] = (statusCounts[s] || 0) + 1;
                 statusAreas[s] = (statusAreas[s] || 0) + a;
